@@ -45,4 +45,9 @@ public abstract class User {
         this.email = email;
     }
 
+    public boolean checkPassword(String hash)
+    {
+        return passHash != null && passHash.equals(hash);
+    }
+
 }
