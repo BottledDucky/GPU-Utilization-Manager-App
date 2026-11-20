@@ -4,7 +4,7 @@ public class Administrator extends User {
 
     public Administrator(String passHash)
     {
-        super("admin", "Administrator", "mohamed.nagy@ku.ac.ae", passHash);
+        super("admin", "Administrator", email, passHash);
     }
 
 }
