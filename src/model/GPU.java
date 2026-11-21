@@ -8,14 +8,17 @@ public class GPU {
 	}
 	
 	public boolean isFree() {
+		return currentJob == null;
 		
 	}
 	
 	public void assign(Job job) {
+		currentJob = job;
 		
 	}
 	
 	public void free() {
+		currentJob = null;
 		
 	}
 
