@@ -87,7 +87,6 @@ private final List<TimeGrant> grants =new ArrayList<>();
             LocalDateTime when) {
         TimeGrant grant =new TimeGrant(minutes, adminUsername, reason, when);
         allocated += minutes;
-        allocated = updated;
         grants.add(grant);
         return grant;
     }
