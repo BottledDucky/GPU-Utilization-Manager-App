@@ -3,7 +3,7 @@ package model;
 import java.time.*;
 
 public class Job {
-	private String jobId, studentId, title, applicantionName, description, 
+	private String jobId, studentId, title, applicationName, description, 
 	cancelledBy, cancellationReason;
 	
 	private String status; //QUEUED, RUNNING, COMPLETED, CANCELLED	
@@ -15,7 +15,7 @@ public class Job {
 	
 	public Job(String jobId, String studentId, String title, String applicationName, String description, String taskSize, LocalDateTime submissionTime) {
 		this.jobId = jobId; this.studentId = studentId; this.title = title;
-		this.applicantionName = applicationName; this.description = description;
+		this.applicationName = applicationName; this.description = description;
 		this.taskSize = taskSize; this.submissionTime = submissionTime;
 		status = "QUEUED";
 		
@@ -26,9 +26,6 @@ public class Job {
 		this.status = "RUNNING";
 		this.assignedGpuID = gpuId;
 		this.startTime = time;
-		
-		
-		
 	}
 	
 	public void complete(LocalDateTime time) {
@@ -48,13 +45,43 @@ public class Job {
 
 	
 	
-	public void initializeWorkloadUnits() {
+	private void initializeWorkloadUnits() {
 		switch (taskSize.toUpperCase()) {
 		case "SMALL": workloadUnits = 5; break;
 		case "MEDIUM": workloadUnits = 15; break;
 		case "LARGE": workloadUnits = 30; break;
 		case "VERY LARGE": workloadUnits = 60; break;
 		}
+	}
+	
+	public long getRemainingMinutes(LocalDateTime currentTime) {
+		if (!(status.equalsIgnoreCase("Running"))) {
+			return 0;
+		}
+		return workloadUnits - getElapsedMinutes(currentTime);
+	}
+	
+	public long getElapsedMinutes(LocalDateTime currentTime) {
+		if (startTime == null) {
+			return 0;
+		}
+		
+		LocalDateTime end = currentTime;
+		
+		if (finishTime != null) {
+			end = finishTime;
+		}
+		
+		return Duration.between(startTime, end).toMinutes();
+		
+	}
+	
+	public LocalDateTime getExpectedFinishTime() {
+		if (startTime == null) {
+			return null;
+		}
+		
+		return startTime.plusMinutes(workloadUnits);
 	}
 	
 	public String getJobId() {
@@ -69,8 +96,8 @@ public class Job {
 		return title;
 	}
 
-	public String getApplicantionName() {
-		return applicantionName;
+	public String getApplicationName() {
+		return applicationName;
 	}
 
 	public String getDescription() {
@@ -117,6 +144,9 @@ public class Job {
 		return cancellationTime;
 	}
 	
+	public int getEstimatedDuration() {
+		return workloadUnits;
+	}
 	
 
 }
