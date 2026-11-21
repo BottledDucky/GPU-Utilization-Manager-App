@@ -23,14 +23,26 @@ public class Job {
 	}
 	
 	public void start(Integer gpuId, LocalDateTime time) {
+		this.status = "RUNNING";
+		this.assignedGpuID = gpuId;
+		this.startTime = time;
+		
+		
 		
 	}
 	
 	public void complete(LocalDateTime time) {
+		this.status = "COMPLETED";
+		this.finishTime = time;
 		
 	}
 	
-	public void cancel(String cancelledBy, String reason) {
+	public void cancel(LocalDateTime time, String cancelledBy, String reason) {
+		if (status.equalsIgnoreCase("RUNNING")) this.finishTime = time;
+		this.status = "CANCELLED";
+		cancellationTime = time;
+		this.cancelledBy = cancelledBy;
+		this.cancellationReason = reason;
 		
 	}
 
