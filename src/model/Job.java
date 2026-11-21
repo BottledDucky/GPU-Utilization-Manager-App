@@ -21,6 +21,18 @@ public class Job {
 		
 		initializeWorkloadUnits();
 	}
+	
+	public void start(Integer gpuId, LocalDateTime time) {
+		
+	}
+	
+	public void complete(LocalDateTime time) {
+		
+	}
+	
+	public void cancel(String cancelledBy, String reason) {
+		
+	}
 
 	
 	
