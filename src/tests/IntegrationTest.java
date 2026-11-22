@@ -16,7 +16,7 @@ public class IntegrationTest {
         TimeAllowance allowance=new TimeAllowance();
         Student student=new Student("100067158","Abdulsalam","100067158@ku.ac.ae","hassedPassword","0501234567",allowance);
         ValidationService.requireJobSubmission("Imputing Data","DSAI","fixing missing values in the dataset","MEDIUM",true,true,allowance.getAvailable());
-        Job job=new Job("J1",student.getUniId(),"Imputing Data","DSAI","fixing missing values in the dataset","MEDIUM",start);
+        Job job=new Job("J101",student.getUniId(),"Imputing Data","DSAI","fixing missing values in the dataset","MEDIUM",start);
         allowance.reserve(job.getJobId(),15);
         job.start(1,start);
         LocalDateTime cancelTime=start.plusMinutes(7);
@@ -25,7 +25,7 @@ public class IntegrationTest {
         job.cancel(cancelTime,student.getUniId(),"Selected the wrong dataset");
         if(allowance.getUsed()!=7 || allowance.getReserved()!=0 || allowance.getAvailable()!=93) throw new AssertionError("Cancelling after 7 minutes should leave 93 minutes available.");
         ValidationService.requireJobSubmission("Evaluating a Classifier","Scikit-learn","Testing a classifier on the validation dataset","SMALL",true,true,allowance.getAvailable());
-        Job second=new Job("J2",student.getUniId(),"Evaluating a Classifier","Scikit-learn","Testing a classifier on the validation dataset","SMALL",cancelTime);
+        Job second=new Job("J102",student.getUniId(),"Evaluating a Classifier","Scikit-learn","Testing a classifier on the validation dataset","SMALL",cancelTime);
         allowance.reserve(second.getJobId(),5);
         second.start(1,cancelTime);
         LocalDateTime finishTime=cancelTime.plusMinutes(5);
@@ -37,7 +37,7 @@ public class IntegrationTest {
         state.addStudent(student);
         state.addJob(job);
         state.addJob(second);
-        state.setNextJobNumber(3);
+        state.setNextJobNumber(103);
         File file=File.createTempFile("integration-",".txt");
         try {
             DataStore store=new DataStore(file);
@@ -55,18 +55,18 @@ public class IntegrationTest {
             if(jobs.size()!=2) throw new AssertionError("There should be two saved jobs.");
             Job cancelled=jobs.get(0);
             Job completed=jobs.get(1);
-            if(!cancelled.getJobId().equals("J1") || !cancelled.getStatus().equals("CANCELLED")) throw new AssertionError("J1 should still be cancelled after loading.");
+            if(!cancelled.getJobId().equals("J101") || !cancelled.getStatus().equals("CANCELLED")) throw new AssertionError("J101 should still be cancelled after loading.");
             if(!cancelled.getCancellationTime().equals(cancelTime)) throw new AssertionError("The cancellation time changed after loading.");
             if(!cancelled.getCancelledBy().equals(student.getUniId())) throw new AssertionError("The wrong user was saved for the cancellation.");
             if(!cancelled.getCancellationReason().equals("Selected the wrong dataset")) throw new AssertionError("The cancellation reason changed after loading.");
-            if(!completed.getJobId().equals("J2") || !completed.getStatus().equals("COMPLETED")) throw new AssertionError("J2 should still be completed after loading.");
+            if(!completed.getJobId().equals("J102") || !completed.getStatus().equals("COMPLETED")) throw new AssertionError("J102 should still be completed after loading.");
             if(!completed.getFinishTime().equals(finishTime)) throw new AssertionError("The finish time changed after loading.");
             if(!loaded.getClockStart().equals(start) || !loaded.getClockNow().equals(finishTime)) throw new AssertionError("The simulation clock changed after loading.");
-            if(loaded.getNextJobNumber()!=3) throw new AssertionError("The next job number should be 3.");
+            if(loaded.getNextJobNumber()!=103) throw new AssertionError("The next job number should be 103.");
             if(!loaded.getQueueJobIds().isEmpty() || !loaded.getGpuAssignments().isEmpty()) throw new AssertionError("Finished jobs should not be waiting or using a GPU.");
             try {
-                restoredAllowance.charge("J1",7);
-                throw new AssertionError("J1 was charged a second time after loading.");
+                restoredAllowance.charge("J101",7);
+                throw new AssertionError("J101 was charged a second time after loading.");
             }
             catch(IllegalStateException e) {
             }
