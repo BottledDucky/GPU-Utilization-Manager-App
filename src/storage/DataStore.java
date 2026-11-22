@@ -17,8 +17,8 @@ public final class DataStore {
             throw new IllegalArgumentException("Saved state is required.");
         }
         state.validate();
-        try (ObjectOutputStream output = new ObjectOutputStream(new FileOutputStream(file))) {
-            output.writeObject(state);
+        try (BufferedWriter writer = new BufferedWriter(new FileWriter(file))) {
+            state.writeText(writer);
         }
     }
 
@@ -28,21 +28,12 @@ public final class DataStore {
             return Optional.empty();
         }
 
-        try (ObjectInputStream input = new ObjectInputStream(new FileInputStream(file))) {
+        try (BufferedReader reader = new BufferedReader(new FileReader(file))) {
 
-            Object object = input.readObject();
-
-            if (!(object instanceof SavedState)) {
-                throw new IOException("Invalid save file.");
-            }
-
-            SavedState state = (SavedState) object;
+            SavedState state = SavedState.readText(reader);
             state.validate();
 
             return Optional.of(state);
-
-        } catch (ClassNotFoundException e) {
-            throw new IOException("Could not load simulation.", e);
         }
     }
 }
