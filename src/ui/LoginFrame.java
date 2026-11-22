@@ -5,7 +5,6 @@ import java.awt.*;
 import java.awt.event.*;
 import logic.AccountService;
 import model.Student;
-import model.Administrator;
 
 public class LoginFrame {
 
@@ -75,11 +74,11 @@ public class LoginFrame {
         {
             if (username.equals("admin"))
             {
-                Administrator admin = accountService.loginAdmin(username, password);
+                accountService.loginAdmin(username, password);
 
                 JOptionPane.showMessageDialog(frame, "Welcome, Administrator!");
 
-                // Connect to Member 3's AdminDashboard later.
+                // Connect AdminDashboard when Main provides shared services.
             }
             else
             {
@@ -87,7 +86,13 @@ public class LoginFrame {
 
                 JOptionPane.showMessageDialog(frame, "Welcome, " + student.getName() + "!");
 
-                // Connect to StudentPanel later.
+                StudentPanel studentPanel = new StudentPanel(student);
+
+                frame.getContentPane().removeAll();
+                frame.add(studentPanel.getPanel());
+
+                frame.revalidate();
+                frame.repaint();
             }
         }
         catch (IllegalArgumentException e)
@@ -104,12 +109,17 @@ public class LoginFrame {
 
     private void openRegistration()
     {
-        RegistrationPanel registration = new RegistrationPanel(accountService);
-
+        RegistrationPanel registration = new RegistrationPanel(accountService, this);
         frame.getContentPane().removeAll();
-
         frame.add(registration.getPanel());
+        frame.revalidate();
+        frame.repaint();
+    }
 
+    public void showLogin()
+    {
+        frame.getContentPane().removeAll();
+        frame.add(panel);
         frame.revalidate();
         frame.repaint();
     }
