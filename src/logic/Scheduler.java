@@ -17,6 +17,10 @@ public class Scheduler {
 	private int nextJobNumber = 101; //this should be saved between sessions somehow
 	
 	public Scheduler(AccountService accountService, SimulationClock clock) {
+		if (accountService == null || clock == null) {
+			throw new IllegalArgumentException("Accounts and simulation clock are required.");
+		}
+		
 		this.clock = clock; this.accountService = accountService;
 		
 		gpus = new ArrayList<>(); jobs = new ArrayList<>(); queue = new ArrayList<>();
@@ -45,6 +49,12 @@ public class Scheduler {
 		if (student == null) {
 			throw new IllegalArgumentException("Student not found.");
 		}
+		
+		if (!accountService.isApproved(student.getUniId()) || student.getTimeAllowance() == null) {
+			throw new IllegalStateException("Student account is not approved.");
+		}
+		
+		ValidationService.requireJobSubmission(title, applicationName, description, taskSize, true, clock.isInitialized(), student.getTimeAllowance().getAvailable());
 		
 		String jobId = "J" + (nextJobNumber);
 		
@@ -102,13 +112,23 @@ public class Scheduler {
 			throw new IllegalArgumentException("Job cannot be cancelled, it is already completed/cancelled.");
 		}
 		
+		if (reason == null || reason.trim().isEmpty()) {
+			throw new IllegalArgumentException("Cancellation reason is required.");
+		}
+		
 		
 		Student student = accountService.getStudent(job.getStudentId());
+		if (student == null || student.getTimeAllowance() == null) {
+			throw new IllegalStateException("Job owner has no active allowance.");
+		}
 		
 		if (cancelBy instanceof Student) {
 			Student cancellingStudent = (Student) cancelBy;
 			if (!(cancellingStudent.getUniId().equals(job.getStudentId()))) {
 				throw new IllegalArgumentException("Students can cancel their own jobs only.");
+			}
+			if (!accountService.isApproved(cancellingStudent.getUniId())) {
+				throw new IllegalStateException("Student account is not approved.");
 			}
 		}
 		
