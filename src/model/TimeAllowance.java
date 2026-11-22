@@ -80,11 +80,7 @@ private final List<TimeGrant> grants =new ArrayList<>();
         settledJobs.add(jobId);
         return elapsedGpuMinutes;
     }
-    public synchronized TimeGrant grantTime(
-            int minutes,
-            String adminUsername,
-            String reason,
-            LocalDateTime when) {
+    public synchronized TimeGrant grantTime(int minutes,String adminUsername,String reason,LocalDateTime when) {
         TimeGrant grant =new TimeGrant(minutes, adminUsername, reason, when);
         allocated += minutes;
         grants.add(grant);
