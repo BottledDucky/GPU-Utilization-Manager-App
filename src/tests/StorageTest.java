@@ -61,8 +61,8 @@ public class StorageTest {
             );
 
             check(text.contains("GPU_STATE_TEXT_V1"),"Missing text header");
-            check(text.contains("STUDENT\t100067158"),"Student is not readable text");
-            check(text.contains("JOB\tJ101"),"Job is not readable text");
+            check(text.contains("student.0.username=100067158"),"Student is not readable text");
+            check(text.contains("job.0.jobId=J101"),"Job is not readable text");
             check(text.contains("Extra test time"),"Grant reason is not readable text");
             //loading saved data
             SavedState restored = null;
