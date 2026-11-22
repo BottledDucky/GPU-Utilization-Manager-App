@@ -1,5 +1,6 @@
 package logic;
 
+import java.time.LocalDateTime;
 import java.util.*;
 
 import model.GPU;
@@ -25,10 +26,42 @@ public class Scheduler {
 	}
 	
 	public void assignWaitingJobs() {
+		for (GPU g: gpus) {
+			if (g.isFree()) {
+				Job job = queue.remove(0);
+				job.start(g.getGpuId(), clock.getCurrentTime());
+				g.assign(job);
+			}
+		}
 		
 	}
 	
 	public Job submitJob(String studentId, String title, String applicationName, String description, String taskSize) {
+		Student student = accountService.getStudent(studentId);
+		
+		if (student == null) {
+			throw new IllegalArgumentException("Student not found.");
+		}
+		
+		String jobId = "J" + (nextJobNumber);
+		
+		Job job = new Job(jobId, studentId, title, applicationName, description, taskSize, clock.getCurrentTime());
+		
+		int duration = job.getEstimatedDuration();
+		
+		if (duration > student.getTimeAllowance().getAvailable()) {
+			throw new IllegalArgumentException("Student doesnt have enough time allowance.");
+		}
+		
+		student.getTimeAllowance().reserve(jobId, duration);
+		
+		
+		
+		queue.add(job);
+		jobs.add(job);
+		nextJobNumber++;
+		assignWaitingJobs();
+		return job;
 		
 	}
 	
