@@ -6,6 +6,7 @@ import java.util.*;
 import model.GPU;
 import model.Job;
 import model.Student;
+import model.User;
 
 public class Scheduler {
 	private ArrayList<Job> queue;
@@ -25,8 +26,10 @@ public class Scheduler {
 		}
 	}
 	
-	public void assignWaitingJobs() {
+	private void assignWaitingJobs() {
 		for (GPU g: gpus) {
+			if (queue.isEmpty()) break;
+			
 			if (g.isFree()) {
 				Job job = queue.remove(0);
 				job.start(g.getGpuId(), clock.getCurrentTime());
@@ -65,21 +68,93 @@ public class Scheduler {
 		
 	}
 	
-	private void completeJob() {
+	public void updateRunningJobs() {
+		for (GPU g: gpus) {
+			if (g.isFree()) continue;
+			Job job = g.getCurrentJob();
+			
+			if (job.getRemainingMinutes(clock.getCurrentTime()) == 0 && job.getStatus().equals("RUNNING")) {
+				Student student = accountService.getStudent(job.getStudentId());
+				student.getTimeAllowance().charge(job.getJobId(), (int) job.getWorkloadUnits());
+				
+				job.complete(clock.getCurrentTime());
+				g.free();
+			
+			}
+		}
+		
+		assignWaitingJobs();
+		
 		
 	}
 	
-	public void cancelJob(String jobId, String cancelBy, String reason) {
+	public void cancelJob(String jobId, User cancelBy, String reason) {
+		Job job = findJob(jobId);
+		if (job == null) {
+			throw new IllegalArgumentException("Job does not exist");
+		}
+		
+		if (cancelBy == null) {
+			throw new IllegalArgumentException("User does not exist.");
+		}
+		
+		if (job.getStatus().equals("COMPLETED") || job.getStatus().equals("CANCELLED")) {
+			throw new IllegalArgumentException("Job cannot be cancelled, it is already completed/cancelled.");
+		}
+		
+		
+		Student student = accountService.getStudent(job.getStudentId());
+		
+		if (cancelBy instanceof Student) {
+			Student cancellingStudent = (Student) cancelBy;
+			if (!(cancellingStudent.getUniId().equals(job.getStudentId()))) {
+				throw new IllegalArgumentException("Students can cancel their own jobs only.");
+			}
+		}
+		
+		if (job.getStatus().equals("QUEUED")) {
+			queue.remove(job);
+			student.getTimeAllowance().charge(jobId, 0);
+			
+		
+			
+		}
+		
+		else if (job.getStatus().equals("RUNNING")) {
+			GPU gpu = findGpu(job.getAssignedGpuID());
+			if (gpu == null) throw new IllegalStateException("Job is assigned to unidentified GPU.");
+			
+			student.getTimeAllowance().charge(jobId, (int) job.getElapsedMinutes(clock.getCurrentTime()));
+			gpu.free();
+			
+			
+			
+		}
+		
+		job.cancel(clock.getCurrentTime(), cancelBy.getUsername(), reason);
+		assignWaitingJobs();
 		
 	}
 
 	
 	public void advanceMinute() {
+		clock.Advance();
+		updateRunningJobs();	
+	}
+	
+	public Job findJob(String jobId) {
+		for (Job j: jobs) {
+			if (j.getJobId().equals(jobId)) return j;
+		}
+		return null;
 		
 	}
 	
-	public void findJob(String jobId) {
-		
+	public GPU findGpu(int gpuId) {
+		for (GPU g: gpus) {
+			if (g.getGpuId() == gpuId) return g;
+		}
+		return null;
 	}
 	
 	
@@ -90,7 +165,7 @@ public class Scheduler {
 	}
 
 	public ArrayList<GPU> getGpus() {
-		return new ArrayList<Job>(gpus);
+		return new ArrayList<GPU>(gpus);
 	}
 
 	public SimulationClock getClock() {
