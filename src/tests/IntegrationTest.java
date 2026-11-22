@@ -40,9 +40,9 @@ public class IntegrationTest {
         state.setNextJobNumber(3);
         File file=File.createTempFile("integration-",".txt");
         try {
-            StoreData store=new StoreData(file);
+            DataStore store=new DataStore(file);
             store.save(state);
-            StoreData reopened=new StoreData(file);
+            DataStore reopened=new DataStore(file);
             Optional<SavedState> result=reopened.load();
             if(!result.isPresent()) throw new AssertionError("The saved data could not be found.");
             SavedState loaded=result.get();
