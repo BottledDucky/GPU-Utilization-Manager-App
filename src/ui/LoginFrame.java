@@ -3,8 +3,14 @@ package ui;
 import javax.swing.*;
 import java.awt.*;
 import java.awt.event.*;
+
 import logic.AccountService;
+import logic.Scheduler;
+import logic.PredictionService;
+import logic.UtilizationService;
+
 import model.Student;
+import model.Administrator;
 
 public class LoginFrame {
 
@@ -14,36 +20,30 @@ public class LoginFrame {
     private JPasswordField passField;
     private JLabel msgLabel;
     private AccountService accountService;
+    private Scheduler scheduler;
 
-    public LoginFrame(AccountService accountService)
+    public LoginFrame(AccountService accountService, Scheduler scheduler)
     {
         this.accountService = accountService;
-
+        this.scheduler = scheduler;
         frame = new JFrame("GPU Utilization Manager");
         frame.setSize(500, 350);
         frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         frame.setLocationRelativeTo(null);
-
         panel = new JPanel();
         panel.setLayout(new GridLayout(5, 2, 10, 10));
-
         panel.add(new JLabel("Username / University ID:"));
         usernameField = new JTextField();
         panel.add(usernameField);
-
         panel.add(new JLabel("Password:"));
         passField = new JPasswordField();
         panel.add(passField);
-
         JButton loginBtn = new JButton("Login");
         panel.add(loginBtn);
-
         JButton registerBtn = new JButton("Request an Account");
         panel.add(registerBtn);
-
         msgLabel = new JLabel("");
         panel.add(msgLabel);
-
         frame.add(panel);
 
         loginBtn.addActionListener(new ActionListener() {
@@ -74,23 +74,32 @@ public class LoginFrame {
         {
             if (username.equals("admin"))
             {
-                accountService.loginAdmin(username, password);
-
+                Administrator admin = accountService.loginAdmin(username, password);
                 JOptionPane.showMessageDialog(frame, "Welcome, Administrator!");
 
-                // Connect AdminDashboard when Main provides shared services.
+                RealAdminBackend backend = new RealAdminBackend(scheduler, accountService, admin, null,
+                		new Runnable() {
+                        public void run()
+                        {
+                            showLogin();
+                        }
+                    });
+
+                PredictionService predictionService = new PredictionService();
+                UtilizationService utilizationService = new UtilizationService();
+
+                AdminDashboard dashboard = new AdminDashboard(backend, predictionService, utilizationService);
+                frame.setVisible(false);
+                dashboard.setVisible(true);
             }
             else
             {
                 Student student = accountService.loginStudent(username, password);
-
                 JOptionPane.showMessageDialog(frame, "Welcome, " + student.getName() + "!");
-
-                StudentPanel studentPanel = new StudentPanel(student);
+                StudentPanel studentPanel = new StudentPanel(student, scheduler);
 
                 frame.getContentPane().removeAll();
                 frame.add(studentPanel.getPanel());
-
                 frame.revalidate();
                 frame.repaint();
             }
@@ -120,8 +129,12 @@ public class LoginFrame {
     {
         frame.getContentPane().removeAll();
         frame.add(panel);
+        usernameField.setText("");
+        passField.setText("");
+        msgLabel.setText("");
         frame.revalidate();
         frame.repaint();
+        frame.setVisible(true);
     }
 
 }
