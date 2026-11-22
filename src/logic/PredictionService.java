@@ -12,12 +12,6 @@ import java.util.Map;
 import model.GPU;
 import model.Job;
 
-/**
- * Computes predicted start times, finish times, queue positions, and remaining wait times
- * for all queued jobs using COPIES of GPU availability times.
- *
- * IMPORTANT: Never modifies real GPU or Job objects (read-only forecast).
- */
 public class PredictionService {
 
     /**
