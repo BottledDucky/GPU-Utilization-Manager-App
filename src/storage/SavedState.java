@@ -125,9 +125,9 @@ public final class SavedState implements Serializable {
         Set<String> studentIds = new HashSet<>();
         for (StudentData student : students) {
             Student restored = student.toStudent();
-            if (!studentIds.add(restored.getUsername())) {
-                throw new IllegalArgumentException("Duplicate student ID.");
-            }
+            String id=restored.getUsername();
+            if(studentIds.contains(id)) throw new IllegalArgumentException("Duplicate student ID.");
+            studentIds.add(id);
         }
 
         Map<String, JobData> jobMap = new HashMap<>();
