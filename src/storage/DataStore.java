@@ -1,3 +1,4 @@
+
 package storage;
 import java.io.*;
 import java.util.*;
@@ -11,17 +12,16 @@ public final class DataStore {
         try (PrintWriter output = new PrintWriter(new FileWriter(file))) {
             state.writeText(output);
             if (output.checkError()) {
-                throw new IOException("Could not save simulation.");
-            }
+                throw new IOException("Could not save simulation.");}
         }
     }
-    public SavedState load() throws IOException {
+    public Optional<SavedState> load() throws IOException {
         if (!file.exists()) {
-            return null;
+            return Optional.empty();
         }
         try (Scanner input = new Scanner(new FileReader(file))) {
             SavedState state = SavedState.readText(input);
-            return state;
+            return Optional.of(state);
         }
     }
 }
