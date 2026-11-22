@@ -2,11 +2,11 @@ package storage;
 import java.io.*;
 import java.util.*;
 
-public final class StoreData {
+public final class DataStore {
 
     private final File file;
 
-    public StoreData(File file) {
+    public DataStore(File file) {
         if (file == null) {
             throw new IllegalArgumentException("Save file is required.");
         }
