@@ -3,26 +3,24 @@ package ui;
 import javax.swing.*;
 import java.awt.*;
 import java.awt.event.*;
-
 import logic.AccountService;
 
 public class RegistrationPanel {
 
     private AccountService accountService;
-
+    private LoginFrame loginFrame;
     private JPanel panel;
-
     private JTextField uniIdField;
     private JTextField nameField;
     private JTextField emailField;
     private JTextField phoneField;
     private JPasswordField passField;
-
     private JLabel msgLabel;
 
-    public RegistrationPanel(AccountService accountService)
+    public RegistrationPanel(AccountService accountService, LoginFrame loginFrame)
     {
         this.accountService = accountService;
+        this.loginFrame = loginFrame;
 
         panel = new JPanel();
         panel.setLayout(new GridLayout(8, 2, 10, 10));
@@ -68,7 +66,7 @@ public class RegistrationPanel {
 
             public void actionPerformed(ActionEvent e)
             {
-                // Will connect to LoginFrame later.
+                loginFrame.showLogin();
             }
         });
     }
