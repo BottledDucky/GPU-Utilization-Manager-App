@@ -23,15 +23,41 @@ public class Scheduler {
 			gpus.add(new GPU(i, null));
 		}
 	}
+	
+	public void assignWaitingJobs() {
+		
+	}
+	
+	public Job submitJob(String studentId, String title, String applicationName, String description, String taskSize) {
+		
+	}
+	
+	private void completeJob() {
+		
+	}
+	
+	public void cancelJob(String jobId, String cancelBy, String reason) {
+		
+	}
 
+	
+	public void advanceMinute() {
+		
+	}
+	
+	public void findJob(String jobId) {
+		
+	}
+	
+	
 	
 	//REVISE GETTERS FOR OBJECTS, THEY SHOULD PROBABLY NOT RETURN THE ACTUAL OBJECT BUT A COPY
 	public ArrayList<Job> getQueue() {
-		return queue;
+		return new ArrayList<Job>(queue);
 	}
 
 	public ArrayList<GPU> getGpus() {
-		return gpus;
+		return new ArrayList<Job>(gpus);
 	}
 
 	public SimulationClock getClock() {
@@ -43,7 +69,7 @@ public class Scheduler {
 	}
 
 	public ArrayList<Job> getJobs() {
-		return jobs;
+		return new ArrayList<Job>(jobs);
 	}
 
 	public int getNextJobNumber() {
