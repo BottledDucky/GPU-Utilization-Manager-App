@@ -11,7 +11,7 @@ public final class ValidationService {
         if (value == null || value.trim().isEmpty()) {
             throw new IllegalArgumentException("University ID is required.");
         }
-        String id = value;
+        String id = value.trim();
         if (id.length() > 9) {
             throw new IllegalArgumentException("University ID cannot exceed 9 digits.");
         }
@@ -30,7 +30,7 @@ public final class ValidationService {
             throw new IllegalArgumentException("Email is required.");
         }
 
-        String email = value;
+        String email = value.trim();
         int at = email.indexOf('@');
         int dot = email.lastIndexOf('.');
 
@@ -39,6 +39,10 @@ public final class ValidationService {
         }
 
         if (email.indexOf('@', at + 1) != -1 || email.contains(" ")|| email.contains("\t")) {
+            throw new IllegalArgumentException("Invalid email address.");
+        }
+        if (email.charAt(0) == '.' || email.charAt(at - 1) == '.'
+                || email.charAt(at + 1) == '.' || email.contains("..")) {
             throw new IllegalArgumentException("Invalid email address.");
         }
         if (!email.endsWith(".com") && !email.endsWith(".ae")&& !email.endsWith(".org")) {
@@ -50,7 +54,7 @@ public static String phone(String value) {
     if (value == null || value.trim().isEmpty()) {
         throw new IllegalArgumentException("Phone number is required.");
     }
-    String phone = value;
+    String phone = value.trim();
     if (phone.length() != 10) {
         throw new IllegalArgumentException("Phone number must be exactly 10 digits.");
     }
@@ -154,11 +158,11 @@ public static String phone(String value) {
             throw new IllegalArgumentException("Date and time are required.");
         }
         try {
-            		DateTimeFormatter dateFormat = DateTimeFormatter.ofPattern("dd/mm/yyyy hh:mm");
+            		DateTimeFormatter dateFormat = DateTimeFormatter.ofPattern("dd/MM/uuuu HH:mm").withResolverStyle(ResolverStyle.STRICT);
             		return LocalDateTime.parse(input.trim(), dateFormat);
 
         } catch (DateTimeParseException e) {
-            throw new IllegalArgumentException("Invalid date and time. Use dd/mm/yyyy hh:mm.");
+            throw new IllegalArgumentException("Invalid date and time. Use dd/MM/yyyy HH:mm.");
         }
     }
     public static String formatSimulatedTime(LocalDateTime time) {
