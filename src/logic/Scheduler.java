@@ -1,12 +1,189 @@
 package logic;
 
+import java.time.LocalDateTime;
 import java.util.*;
 
 import model.GPU;
 import model.Job;
+import model.Student;
+import model.User;
 
 public class Scheduler {
-	ArrayList<Job> queue;
-	GPU[] gpus;
+	private ArrayList<Job> queue;
+	private ArrayList<GPU> gpus;
+	private SimulationClock clock;
+	private AccountService accountService;
+	private ArrayList<Job> jobs;
+	private int nextJobNumber = 101; //this should be saved between sessions somehow
+	
+	public Scheduler(AccountService accountService, SimulationClock clock) {
+		this.clock = clock; this.accountService = accountService;
+		
+		gpus = new ArrayList<>(); jobs = new ArrayList<>(); queue = new ArrayList<>();
+		
+		for (int i = 1; i<=4; i++) {
+			gpus.add(new GPU(i, null));
+		}
+	}
+	
+	private void assignWaitingJobs() {
+		for (GPU g: gpus) {
+			if (queue.isEmpty()) break;
+			
+			if (g.isFree()) {
+				Job job = queue.remove(0);
+				job.start(g.getGpuId(), clock.getCurrentTime());
+				g.assign(job);
+			}
+		}
+		
+	}
+	
+	public Job submitJob(String studentId, String title, String applicationName, String description, String taskSize) {
+		Student student = accountService.getStudent(studentId);
+		
+		if (student == null) {
+			throw new IllegalArgumentException("Student not found.");
+		}
+		
+		String jobId = "J" + (nextJobNumber);
+		
+		Job job = new Job(jobId, studentId, title, applicationName, description, taskSize, clock.getCurrentTime());
+		
+		int duration = job.getEstimatedDuration();
+		
+		if (duration > student.getTimeAllowance().getAvailable()) {
+			throw new IllegalArgumentException("Student doesnt have enough time allowance.");
+		}
+		
+		student.getTimeAllowance().reserve(jobId, duration);
+		
+		
+		
+		queue.add(job);
+		jobs.add(job);
+		nextJobNumber++;
+		assignWaitingJobs();
+		return job;
+		
+	}
+	
+	public void updateRunningJobs() {
+		for (GPU g: gpus) {
+			if (g.isFree()) continue;
+			Job job = g.getCurrentJob();
+			
+			if (job.getRemainingMinutes(clock.getCurrentTime()) == 0 && job.getStatus().equals("RUNNING")) {
+				Student student = accountService.getStudent(job.getStudentId());
+				student.getTimeAllowance().charge(job.getJobId(), (int) job.getWorkloadUnits());
+				
+				job.complete(clock.getCurrentTime());
+				g.free();
+			
+			}
+		}
+		
+		assignWaitingJobs();
+		
+		
+	}
+	
+	public void cancelJob(String jobId, User cancelBy, String reason) {
+		Job job = findJob(jobId);
+		if (job == null) {
+			throw new IllegalArgumentException("Job does not exist");
+		}
+		
+		if (cancelBy == null) {
+			throw new IllegalArgumentException("User does not exist.");
+		}
+		
+		if (job.getStatus().equals("COMPLETED") || job.getStatus().equals("CANCELLED")) {
+			throw new IllegalArgumentException("Job cannot be cancelled, it is already completed/cancelled.");
+		}
+		
+		
+		Student student = accountService.getStudent(job.getStudentId());
+		
+		if (cancelBy instanceof Student) {
+			Student cancellingStudent = (Student) cancelBy;
+			if (!(cancellingStudent.getUniId().equals(job.getStudentId()))) {
+				throw new IllegalArgumentException("Students can cancel their own jobs only.");
+			}
+		}
+		
+		if (job.getStatus().equals("QUEUED")) {
+			queue.remove(job);
+			student.getTimeAllowance().charge(jobId, 0);
+			
+		
+			
+		}
+		
+		else if (job.getStatus().equals("RUNNING")) {
+			GPU gpu = findGpu(job.getAssignedGpuID());
+			if (gpu == null) throw new IllegalStateException("Job is assigned to unidentified GPU.");
+			
+			student.getTimeAllowance().charge(jobId, (int) job.getElapsedMinutes(clock.getCurrentTime()));
+			gpu.free();
+			
+			
+			
+		}
+		
+		job.cancel(clock.getCurrentTime(), cancelBy.getUsername(), reason);
+		assignWaitingJobs();
+		
+	}
+
+	
+	public void advanceMinute() {
+		clock.Advance();
+		updateRunningJobs();	
+	}
+	
+	public Job findJob(String jobId) {
+		for (Job j: jobs) {
+			if (j.getJobId().equals(jobId)) return j;
+		}
+		return null;
+		
+	}
+	
+	public GPU findGpu(int gpuId) {
+		for (GPU g: gpus) {
+			if (g.getGpuId() == gpuId) return g;
+		}
+		return null;
+	}
+	
+	
+	
+	//REVISE GETTERS FOR OBJECTS, THEY SHOULD PROBABLY NOT RETURN THE ACTUAL OBJECT BUT A COPY
+	public ArrayList<Job> getQueue() {
+		return new ArrayList<Job>(queue);
+	}
+
+	public ArrayList<GPU> getGpus() {
+		return new ArrayList<GPU>(gpus);
+	}
+
+	public SimulationClock getClock() {
+		return clock;
+	}
+
+	public AccountService getAccountService() {
+		return accountService;
+	}
+
+	public ArrayList<Job> getJobs() {
+		return new ArrayList<Job>(jobs);
+	}
+
+	public int getNextJobNumber() {
+		return nextJobNumber;
+	}
+	
+	
 
 }
