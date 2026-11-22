@@ -66,7 +66,7 @@ public class RegistrationPanel {
 
             public void actionPerformed(ActionEvent e)
             {
-                loginFrame.showLogin();
+                RegistrationPanel.this.loginFrame.showLogin();
             }
         });
     }
@@ -91,7 +91,12 @@ public class RegistrationPanel {
             msgLabel.setForeground(Color.GREEN);
             msgLabel.setText("Request sent. Status: Pending.");
 
-            JOptionPane.showMessageDialog(panel, "Registration request submitted successfully.");
+            passField.setText("");
+
+            if (loginFrame.saveData())
+            {
+                JOptionPane.showMessageDialog(panel, "Registration request submitted successfully.");
+            }
         }
         catch (IllegalArgumentException e)
         {
