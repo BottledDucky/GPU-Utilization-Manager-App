@@ -4,13 +4,17 @@ import javax.swing.*;
 import javax.swing.table.DefaultTableModel;
 import java.awt.*;
 import java.awt.event.*;
+import java.util.ArrayList;
 import model.Student;
+import model.Job;
+import logic.Scheduler;
 
 public class StudentPanel {
 
     private JPanel panel;
     private JTabbedPane tabs;
     private Student student;
+    private Scheduler scheduler;
     private JTextField nameField;
     private JTextField appField;
     private JTextArea descField;
@@ -18,20 +22,22 @@ public class StudentPanel {
     private JLabel allowLabel;
     private JTable jobsTable;
     private DefaultTableModel jobsModel;
+    private JTextField searchField;
+    private JComboBox<String> statusBox;
 
-    public StudentPanel(Student student)
+    public StudentPanel(Student student, Scheduler scheduler)
     {
         this.student = student;
+        this.scheduler = scheduler;
 
         panel = new JPanel();
         panel.setLayout(new BorderLayout());
-
         tabs = new JTabbedPane();
-
         tabs.addTab("Home", makeHome());
         tabs.addTab("My Jobs", makeJobs());
-
         panel.add(tabs, BorderLayout.CENTER);
+        refreshAllowance();
+        refreshJobs();
     }
 
     public JPanel getPanel()
@@ -51,7 +57,7 @@ public class StudentPanel {
 
         top.add(new JLabel("University ID: " + student.getUniId()));
 
-        allowLabel = new JLabel("GPU Allowance: Not available yet");
+        allowLabel = new JLabel("");
 
         top.add(allowLabel);
 
@@ -100,6 +106,25 @@ public class StudentPanel {
         JPanel jobs = new JPanel();
         jobs.setLayout(new BorderLayout());
 
+        JPanel top = new JPanel();
+
+        top.add(new JLabel("Search:"));
+
+        searchField = new JTextField(12);
+        top.add(searchField);
+
+        top.add(new JLabel("Status:"));
+
+        String[] statuses = {"All", "QUEUED", "RUNNING", "COMPLETED", "CANCELLED"};
+
+        statusBox = new JComboBox<String>(statuses);
+        top.add(statusBox);
+
+        JButton searchBtn = new JButton("Search");
+        top.add(searchBtn);
+
+        jobs.add(top, BorderLayout.NORTH);
+
         String[] cols = {"Job ID", "Application", "Status", "GPU", "Duration", "Wait", "Result"};
 
         jobsModel = new DefaultTableModel(cols, 0);
@@ -118,11 +143,20 @@ public class StudentPanel {
 
         jobs.add(bottom, BorderLayout.SOUTH);
 
+        searchBtn.addActionListener(new ActionListener() {
+
+            public void actionPerformed(ActionEvent e)
+            {
+                refreshJobs();
+            }
+        });
+
         refreshBtn.addActionListener(new ActionListener() {
 
             public void actionPerformed(ActionEvent e)
             {
                 refreshJobs();
+                refreshAllowance();
             }
         });
 
@@ -137,17 +171,25 @@ public class StudentPanel {
         return jobs;
     }
 
+    private void refreshAllowance()
+    {
+        if (student.getTimeAllowance() == null)
+        {
+            allowLabel.setText("GPU Allowance: Not available");
+            return;
+        }
+
+        allowLabel.setText("Allocated: " + student.getTimeAllowance().getAllocated() + " | Used: " + student.getTimeAllowance().getUsed() + " | Reserved: " + student.getTimeAllowance().getReserved() + " | Available: " + student.getTimeAllowance().getAvailable());
+    }
+
     private void submitJob()
     {
         String title = nameField.getText();
         String app = appField.getText();
         String desc = descField.getText();
-
         String size = (String) sizeBox.getSelectedItem();
 
-        if (title.trim().isEmpty() ||
-            app.trim().isEmpty() ||
-            desc.trim().isEmpty())
+        if (title.trim().isEmpty() || app.trim().isEmpty() || desc.trim().isEmpty())
         {
             JOptionPane.showMessageDialog(panel, "Please fill all job fields.");
             return;
@@ -172,21 +214,31 @@ public class StudentPanel {
             mins = 60;
         }
 
-        int confirm = JOptionPane.showConfirmDialog(
-            panel,
-            "This job will take " + mins + " GPU minutes. Submit?",
-            "Confirm Job",
-            JOptionPane.YES_NO_OPTION
-        );
+        int confirm = JOptionPane.showConfirmDialog(panel, "This job will take " + mins + " GPU minutes. Submit?", "Confirm Job", JOptionPane.YES_NO_OPTION);
 
         if (confirm == JOptionPane.YES_OPTION)
         {
-            // Connect to Member 2's Scheduler here.
+            try
+            {
+                Job job = scheduler.submitJob(student.getUniId(), title, app, desc, size);
 
-            JOptionPane.showMessageDialog(
-                panel,
-                "Job submission is not connected yet."
-            );
+                JOptionPane.showMessageDialog(panel, "Job submitted successfully. Job ID: " + job.getJobId());
+
+                nameField.setText("");
+                appField.setText("");
+                descField.setText("");
+
+                refreshJobs();
+                refreshAllowance();
+            }
+            catch (IllegalArgumentException e)
+            {
+                JOptionPane.showMessageDialog(panel, e.getMessage());
+            }
+            catch (IllegalStateException e)
+            {
+                JOptionPane.showMessageDialog(panel, e.getMessage());
+            }
         }
     }
 
@@ -194,8 +246,65 @@ public class StudentPanel {
     {
         jobsModel.setRowCount(0);
 
-        // Get this student's jobs from Member 2's Scheduler.
-        // Add the jobs to the table here.
+        ArrayList<Job> jobs = scheduler.getJobs();
+
+        String search = searchField.getText().trim();
+        String status = (String) statusBox.getSelectedItem();
+
+        for (int i = 0; i < jobs.size(); i++)
+        {
+            Job job = jobs.get(i);
+
+            if (job.getStudentId().equals(student.getUniId()))
+            {
+                boolean found = false;
+
+                if (search.isEmpty())
+                {
+                    found = true;
+                }
+                else if (job.getJobId().equalsIgnoreCase(search) || job.getTitle().equalsIgnoreCase(search))
+                {
+                    found = true;
+                }
+
+                if (found && (status.equals("All") || job.getStatus().equals(status)))
+                {
+                    String gpu = "None";
+
+                    if (job.getAssignedGpuID() != null)
+                    {
+                        gpu = "GPU " + job.getAssignedGpuID();
+                    }
+
+                    String wait = "-";
+
+                    if (job.getStatus().equals("QUEUED"))
+                    {
+                        wait = "Waiting";
+                    }
+                    else if (job.getStatus().equals("RUNNING"))
+                    {
+                        wait = "0";
+                    }
+
+                    String result = "-";
+
+                    if (job.getStatus().equals("COMPLETED"))
+                    {
+                        result = "Completed";
+                    }
+                    else if (job.getStatus().equals("CANCELLED"))
+                    {
+                        result = "Cancelled";
+                    }
+
+                    Object[] row = {job.getJobId(), job.getApplicationName(), job.getStatus(), gpu, job.getEstimatedDuration(), wait, result};
+
+                    jobsModel.addRow(row);
+                }
+            }
+        }
     }
 
     private void cancelJob()
@@ -208,10 +317,9 @@ public class StudentPanel {
             return;
         }
 
-        String reason = JOptionPane.showInputDialog(
-            panel,
-            "Enter cancellation reason:"
-        );
+        String jobId = jobsModel.getValueAt(jobsTable.convertRowIndexToModel(row), 0).toString();
+
+        String reason = JOptionPane.showInputDialog(panel, "Enter cancellation reason:");
 
         if (reason == null)
         {
@@ -220,19 +328,26 @@ public class StudentPanel {
 
         if (reason.trim().isEmpty())
         {
-            JOptionPane.showMessageDialog(
-                panel,
-                "Cancellation reason is required."
-            );
+            JOptionPane.showMessageDialog(panel, "Cancellation reason is required.");
             return;
         }
 
-        // Connect to Member 2's Scheduler cancellation method.
+        try
+        {
+            scheduler.cancelJob(jobId, student, reason);
 
-        JOptionPane.showMessageDialog(
-            panel,
-            "Job cancellation is not connected yet."
-        );
+            JOptionPane.showMessageDialog(panel, "Job cancelled successfully.");
+            refreshJobs();
+            refreshAllowance();
+        }
+        catch (IllegalArgumentException e)
+        {
+            JOptionPane.showMessageDialog(panel, e.getMessage());
+        }
+        catch (IllegalStateException e)
+        {
+            JOptionPane.showMessageDialog(panel, e.getMessage());
+        }
     }
 
 }
