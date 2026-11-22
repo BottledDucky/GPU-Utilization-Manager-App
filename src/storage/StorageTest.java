@@ -22,7 +22,7 @@ public class StorageTest {
 
         Files.delete(path);
         try {
-            StoreData store = new StoreData(path.toFile());
+            DataStore store = new DataStore(file);
 
             //checks missing file
             check(
