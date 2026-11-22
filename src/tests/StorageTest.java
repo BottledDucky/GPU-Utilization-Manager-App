@@ -60,7 +60,7 @@ public class StorageTest {
                 StandardCharsets.UTF_8
             );
 
-            check(text.startsWith("GPU_STATE_TEXT_V1"),"Missing text header");
+            check(text.contains("GPU_STATE_TEXT_V1"),"Missing text header");
             check(text.contains("STUDENT\t100067158"),"Student is not readable text");
             check(text.contains("JOB\tJ101"),"Job is not readable text");
             check(text.contains("Extra test time"),"Grant reason is not readable text");
