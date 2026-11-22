@@ -4,7 +4,6 @@ import java.io.*;
 import java.time.*;
 import java.util.*;
 import model.*;
-
 public final class SavedState implements Serializable {
     private static final int serialVersionUID = 1;
     private LocalDateTime clockStart;
@@ -177,6 +176,161 @@ public final class SavedState implements Serializable {
 
         for (RequestData request : requests) {
             request.toRequest();
+        }
+    }
+
+
+    // Store each value as a readable key=value entry in the text file.
+    private static void put(Properties data, String key, Object value) {
+        if (value != null) data.setProperty(key, value.toString());
+    }
+    private static String get(Properties data, String key) throws IOException {
+        String value = data.getProperty(key);
+        if (value == null) throw new IOException("Missing saved field: " + key);
+        return value;
+    }
+    private static int number(Properties data, String key) throws IOException {
+        return Integer.parseInt(get(data, key));
+    }
+    private static LocalDateTime time(Properties data, String key) {
+        String value = data.getProperty(key);
+        return value == null ? null : LocalDateTime.parse(value);
+    }
+    private static void saveStudent(Properties data, String key, StudentData student) {
+        put(data, key + ".username", student.username);
+        put(data, key + ".name", student.name);
+        put(data, key + ".email", student.email);
+        put(data, key + ".passwordHash", student.passwordHash);
+        put(data, key + ".phone", student.phone);
+        put(data, key + ".hasAllowance", student.hasAllowance);
+        if (!student.hasAllowance) return;
+        put(data, key + ".allocated", student.allocated);
+        put(data, key + ".used", student.used);
+        put(data, key + ".reservations.count", student.reservations.size());
+        int i = 0;
+        for (Map.Entry<String, Integer> entry : student.reservations.entrySet()) {
+            put(data, key + ".reservation." + i + ".job", entry.getKey());
+            put(data, key + ".reservation." + i + ".minutes", entry.getValue());
+            i++;
+        }
+        put(data, key + ".settled.count", student.settledJobs.size());
+        i = 0;
+        for (String id : student.settledJobs) put(data, key + ".settled." + i++, id);
+        put(data, key + ".grants.count", student.grants.size());
+        for (i = 0; i < student.grants.size(); i++) {
+            TimeGrant grant = student.grants.get(i);
+            String g = key + ".grant." + i;
+            put(data, g + ".minutes", grant.getMinutes());
+            put(data, g + ".admin", grant.getAdminUsername());
+            put(data, g + ".reason", grant.getReason());
+            put(data, g + ".time", grant.getSimulatedTime());
+        }
+    }
+    private static StudentData loadStudent(Properties data, String key) throws IOException {
+        StudentData student = new StudentData(new Student(
+            get(data, key + ".username"), get(data, key + ".name"),
+            get(data, key + ".email"), get(data, key + ".passwordHash"),
+            get(data, key + ".phone"), null));
+        student.hasAllowance = Boolean.parseBoolean(get(data, key + ".hasAllowance"));
+        if (!student.hasAllowance) return student;
+        student.allocated = number(data, key + ".allocated");
+        student.used = number(data, key + ".used");
+        student.reservations = new LinkedHashMap<>();
+        for (int i = 0; i < number(data, key + ".reservations.count"); i++) {
+            student.reservations.put(get(data, key + ".reservation." + i + ".job"),
+                number(data, key + ".reservation." + i + ".minutes"));
+        }
+        student.settledJobs = new LinkedHashSet<>();
+        for (int i = 0; i < number(data, key + ".settled.count"); i++)
+            student.settledJobs.add(get(data, key + ".settled." + i));
+        student.grants = new ArrayList<>();
+        for (int i = 0; i < number(data, key + ".grants.count"); i++) {
+            String g = key + ".grant." + i;
+            student.grants.add(new TimeGrant(number(data, g + ".minutes"),
+                get(data, g + ".admin"), get(data, g + ".reason"), time(data, g + ".time")));
+        }
+        return student;
+    }
+    public void writeText(PrintWriter output) throws IOException {
+        validate();
+        Properties data = new Properties();
+        put(data, "format", "GPU_STATE_TEXT_V1");
+        put(data, "clockStart", clockStart);
+        put(data, "clockNow", clockNow);
+        put(data, "nextJobNumber", nextJobNumber);
+        put(data, "students.count", students.size());
+        for (int i = 0; i < students.size(); i++) saveStudent(data, "student." + i, students.get(i));
+        put(data, "requests.count", requests.size());
+        for (int i = 0; i < requests.size(); i++) {
+            saveStudent(data, "request." + i + ".student", requests.get(i).student);
+            put(data, "request." + i + ".status", requests.get(i).status);
+        }
+        put(data, "jobs.count", jobs.size());
+        for (int i = 0; i < jobs.size(); i++) {
+            JobData job = jobs.get(i);
+            String key = "job." + i + ".";
+            String[] names = {"jobId", "studentId", "title", "application", "description", "taskSize", "status", "gpuId", "submissionTime", "startTime", "finishTime", "cancellationTime", "cancelledBy", "cancellationReason"};
+            Object[] values = {job.jobId, job.studentId, job.title, job.application, job.description, job.taskSize, job.status, job.gpuId, job.submissionTime, job.startTime, job.finishTime, job.cancellationTime, job.cancelledBy, job.cancellationReason};
+            for (int j = 0; j < names.length; j++) put(data, key + names[j], values[j]);
+        }
+        put(data, "queue.count", queueJobIds.size());
+        for (int i = 0; i < queueJobIds.size(); i++) put(data, "queue." + i, queueJobIds.get(i));
+        put(data, "gpus.count", gpuAssignments.size());
+        int i = 0;
+        for (Map.Entry<Integer, String> entry : gpuAssignments.entrySet()) {
+            put(data, "gpu." + i + ".id", entry.getKey());
+            put(data, "gpu." + i + ".job", entry.getValue());
+            i++;
+        }
+        // Properties escapes newlines and separators so descriptions are preserved.
+        data.store(output, "GPU simulation text save");
+    }
+    public static SavedState readText(Scanner input) throws IOException {
+        Properties data = new Properties();
+        StringBuilder text = new StringBuilder();
+        while (input.hasNextLine()) text.append(input.nextLine()).append('\n');
+        data.load(new StringReader(text.toString()));
+        if (!"GPU_STATE_TEXT_V1".equals(data.getProperty("format")))
+            throw new IOException("Invalid save file header.");
+        try {
+            SavedState state = new SavedState();
+            state.clockStart = time(data, "clockStart");
+            state.clockNow = time(data, "clockNow");
+            state.nextJobNumber = number(data, "nextJobNumber");
+            for (int i = 0; i < number(data, "students.count"); i++)
+                state.students.add(loadStudent(data, "student." + i));
+            for (int i = 0; i < number(data, "requests.count"); i++) {
+                String key = "request." + i;
+                RequestData request = new RequestData(new AccessRequest(
+                    loadStudent(data, key + ".student").toStudent()));
+                request.status = get(data, key + ".status");
+                state.requests.add(request);
+            }
+            for (int i = 0; i < number(data, "jobs.count"); i++) {
+                String key = "job." + i + ".";
+                JobData job = new JobData(new Job(get(data, key + "jobId"),
+                    get(data, key + "studentId"), get(data, key + "title"),
+                    get(data, key + "application"), get(data, key + "description"),
+                    get(data, key + "taskSize"), time(data, key + "submissionTime")));
+                job.status = get(data, key + "status");
+                String gpu = data.getProperty(key + "gpuId");
+                job.gpuId = gpu == null ? null : Integer.parseInt(gpu);
+                job.startTime = time(data, key + "startTime");
+                job.finishTime = time(data, key + "finishTime");
+                job.cancellationTime = time(data, key + "cancellationTime");
+                job.cancelledBy = data.getProperty(key + "cancelledBy");
+                job.cancellationReason = data.getProperty(key + "cancellationReason");
+                state.jobs.add(job);
+            }
+            for (int i = 0; i < number(data, "queue.count"); i++)
+                state.queueJobIds.add(get(data, "queue." + i));
+            for (int i = 0; i < number(data, "gpus.count"); i++)
+                state.gpuAssignments.put(number(data, "gpu." + i + ".id"),
+                    get(data, "gpu." + i + ".job"));
+            state.validate();
+            return state;
+        } catch (RuntimeException e) {
+            throw new IOException("Invalid saved simulation data: " + e.getMessage(), e);
         }
     }
 
