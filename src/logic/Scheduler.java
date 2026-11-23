@@ -177,7 +177,48 @@ public class Scheduler {
 		return null;
 	}
 	
-	
+	public void restoreData(ArrayList<Job> savedJobs, ArrayList<String> queueIds, int nextNumber)
+	{
+	    jobs.clear();
+	    queue.clear();
+
+	    for (int i = 0; i < gpus.size(); i++)
+	    {
+	        gpus.get(i).free();
+	    }
+
+	    for (int i = 0; i < savedJobs.size(); i++)
+	    {
+	        jobs.add(savedJobs.get(i));
+	    }
+
+	    for (int i = 0; i < queueIds.size(); i++)
+	    {
+	        Job job = findJob(queueIds.get(i));
+
+	        if (job != null && job.getStatus().equals("QUEUED"))
+	        {
+	            queue.add(job);
+	        }
+	    }
+
+	    for (int i = 0; i < jobs.size(); i++)
+	    {
+	        Job job = jobs.get(i);
+
+	        if (job.getStatus().equals("RUNNING"))
+	        {
+	            GPU gpu = findGpu(job.getAssignedGpuID());
+
+	            if (gpu != null)
+	            {
+	                gpu.assign(job);
+	            }
+	        }
+	    }
+
+	    nextJobNumber = nextNumber;
+	}
 	
 	//REVISE GETTERS FOR OBJECTS, THEY SHOULD PROBABLY NOT RETURN THE ACTUAL OBJECT BUT A COPY
 	public ArrayList<Job> getQueue() {
