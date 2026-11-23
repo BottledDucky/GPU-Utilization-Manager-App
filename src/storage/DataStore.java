@@ -13,6 +13,10 @@ public final class DataStore {
             state.writeText(output);
             if (output.checkError()) {
                 throw new IOException("Could not save simulation.");}
+            File folder = file.getParentFile();
+
+        if (folder != null && !folder.exists()){
+    folder.mkdirs();}
         }
     }
     public Optional<SavedState> load() throws IOException {
