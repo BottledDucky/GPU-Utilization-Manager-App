@@ -144,6 +144,12 @@ public class PredictionService {
         }
         return computePredictions(gpus, queuedJobs, clock.getCurrentTime());
     }
+    
+    public ArrayList<JobPrediction> getPredictions(
+            ArrayList<GPU> gpus, ArrayList<Job> queuedJobs, LocalDateTime currentTime) {
+        return new ArrayList<JobPrediction>(
+            computePredictions(gpus.toArray(new GPU[0]), queuedJobs, currentTime).values());
+    }
 
     /**
      * Finds the index of the GPU with the earliest free-at time.
