@@ -25,21 +25,6 @@ public class SimulationClock {
 		return startTime != null && currentTime != null;
 	}
 	
-	public void initialize(LocalDateTime time) {
-		if (time == null) {
-			throw new IllegalArgumentException("Choose a simulation date and time.");
-		}
-		if (isInitialized()) {
-			throw new IllegalStateException("Simulation clock is already initialized.");
-		}
-		currentTime = time;
-		startTime = time;
-	}
-	
-	public boolean isInitialized() {
-		return startTime != null && currentTime != null;
-	}
-	
 	public void Advance() {
 		if (!isInitialized()) {
 			throw new IllegalStateException("Simulation clock is not initialized.");

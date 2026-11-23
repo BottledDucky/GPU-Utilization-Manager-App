@@ -151,12 +151,6 @@ public class PredictionService {
             computePredictions(gpus.toArray(new GPU[0]), queuedJobs, currentTime).values());
     }
 
-    public ArrayList<JobPrediction> getPredictions(
-            ArrayList<GPU> gpus, ArrayList<Job> queuedJobs, LocalDateTime currentTime) {
-        return new ArrayList<JobPrediction>(
-            computePredictions(gpus.toArray(new GPU[0]), queuedJobs, currentTime).values());
-    }
-
     /**
      * Finds the index of the GPU with the earliest free-at time.
      * Strict isBefore() preserves tie-breaking by lowest GPU ID (since sortedGpus is ordered by ID).
