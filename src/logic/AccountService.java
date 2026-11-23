@@ -116,7 +116,23 @@ public class AccountService {
         {
             throw new IllegalArgumentException("University ID already registered.");
         }
-
+        
+        for (int i = 0; i < students.size(); i++)
+        {
+            if (students.get(i).getEmail().equalsIgnoreCase(email))
+            {
+                throw new IllegalArgumentException("Email address is already registered.");
+            }
+        }
+        
+        for (int i = 0; i < students.size(); i++)
+        {
+            if (students.get(i).getPhoneNum().equals(phoneNum))
+            {
+                throw new IllegalArgumentException("Phone number is already registered.");
+            }
+        }
+        
         Student student = new Student(uniId, name, email, password, phoneNum, null);
 
         AccessRequest request = new AccessRequest(student);
