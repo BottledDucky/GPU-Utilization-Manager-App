@@ -2,16 +2,21 @@ package app;
 
 import java.io.*;
 import java.util.*;
+
 import javax.swing.*;
+
 import logic.AccountService;
 import logic.Scheduler;
 import logic.SimulationClock;
+
 import model.AccessRequest;
 import model.GPU;
 import model.Job;
 import model.Student;
+
 import storage.DataStore;
 import storage.SavedState;
+
 import ui.LoginFrame;
 
 public class Main {
@@ -22,13 +27,7 @@ public class Main {
 
     public static void main(String[] args)
     {
-        SwingUtilities.invokeLater(new Runnable() {
-
-            public void run()
-            {
-                start();
-            }
-        });
+        start();
     }
 
     private static void start()
@@ -58,34 +57,18 @@ public class Main {
 
             if (saved != null)
             {
-                scheduler.restoreData(
-                    new ArrayList<Job>(saved.restoreJobs()),
-                    new ArrayList<String>(saved.getQueueJobIds()),
-                    saved.getNextJobNumber()
-                );
+                scheduler.restoreData(new ArrayList<Job>(saved.restoreJobs()), new ArrayList<String>(saved.getQueueJobIds()), saved.getNextJobNumber());
             }
-
-            new LoginFrame(accountService, scheduler, new Runnable() {
-
-                public void run()
-                {
-                    save();
-                }
-            });
+            
+            new LoginFrame(accountService, scheduler);
         }
         catch (Exception e)
         {
-            JOptionPane.showMessageDialog(
-                null,
-                "The application could not start.\n" + e.getMessage() +
-                "\nAny existing save file has been kept.",
-                "Startup error",
-                JOptionPane.ERROR_MESSAGE
-            );
+            JOptionPane.showMessageDialog(null, "The application could not start.\n" + e.getMessage() + "\nAny existing save file has been kept.", "Startup error", JOptionPane.ERROR_MESSAGE);
         }
     }
 
-    private static void save()
+    public static void saveData()
     {
         SavedState state = new SavedState();
         state.setClock(scheduler.getClock());
@@ -120,8 +103,7 @@ public class Main {
         {
             if (!gpus.get(i).isFree())
             {
-                state.assignGpu(gpus.get(i).getGpuId(),
-                                gpus.get(i).getCurrentJob().getJobId());
+                state.assignGpu(gpus.get(i).getGpuId(), gpus.get(i).getCurrentJob().getJobId());
             }
         }
 
@@ -136,4 +118,5 @@ public class Main {
             throw new IllegalStateException("Could not save data: " + e.getMessage(), e);
         }
     }
+
 }
