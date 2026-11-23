@@ -13,7 +13,7 @@ public final class SavedState implements Serializable {
     private List<JobData> jobs = new ArrayList<>();
     private List<String> queueJobIds = new ArrayList<>();
     private Map<Integer, String> gpuAssignments = new LinkedHashMap<>();
-    private int nextJobNumber = 1;
+    private int nextJobNumber = 101;
 
     public SavedState() {
     }
@@ -77,6 +77,30 @@ public final class SavedState implements Serializable {
         }
         return result;
     }
+    public ArrayList<Student> restoreStudentList() {
+        ArrayList<Student> result = new ArrayList<Student>();
+        for (StudentData data : students) {
+            result.add(data.toStudent());
+        }
+        return result;
+    }
+    public ArrayList<AccessRequest> restoreRequests(ArrayList<Student> restoredStudents) {
+        ArrayList<AccessRequest> result = new ArrayList<AccessRequest>();
+        for (RequestData data : requests) {
+            Student student = null;
+            for (Student restored : restoredStudents) {
+                if (restored.getUniId().equals(data.student.username)) {
+                    student = restored;
+                    break;
+                }
+            }
+            if (student == null) {
+                throw new IllegalArgumentException("Registration request has no matching student.");
+            }
+            result.add(data.toRequest(student));
+        }
+        return result;
+    }
     public List<AccessRequest> restoreRequests() {
         List<AccessRequest> result = new ArrayList<>();
         for (RequestData data : requests) {
@@ -96,10 +120,7 @@ public final class SavedState implements Serializable {
             return null;
         }
         SimulationClock clock = new SimulationClock(clockStart);
-        int elapsed = Math.toIntExact(
-        	    java.time.Duration.between(clockStart, clockNow).toMinutes()
-        	);
-
+        int elapsed = Math.toIntExact(java.time.Duration.between(clockStart, clockNow).toMinutes());
         	for (int i = 0; i < elapsed; i++) {
         	    clock.Advance();
         	}
@@ -139,6 +160,9 @@ public final class SavedState implements Serializable {
             if (clockNow == null || job.submissionTime == null|| job.submissionTime.isAfter(clockNow)) {
                 throw new IllegalArgumentException("Invalid job timestamp.");
             }
+            if (!studentIds.contains(job.studentId)) {
+                throw new IllegalArgumentException("Job has no matching student.");
+            }
             job.toJob();
             jobMap.put(job.jobId, job);
         }
@@ -175,12 +199,12 @@ public final class SavedState implements Serializable {
         }
 
         for (RequestData request : requests) {
+            if (request == null || request.student == null || !studentIds.contains(request.student.username)) {
+                throw new IllegalArgumentException("Registration request has no matching student.");
+            }
             request.toRequest();
         }
     }
-
-
-    // Store each value as a readable key=value entry in the text file.
     private static void put(Properties data, String key, Object value) {
         if (value != null) data.setProperty(key, value.toString());
     }
@@ -282,7 +306,6 @@ public final class SavedState implements Serializable {
             put(data, "gpu." + i + ".job", entry.getValue());
             i++;
         }
-        // Properties escapes newlines and separators so descriptions are preserved.
         data.store(output, "GPU simulation text save");
     }
     public static SavedState readText(Scanner input) throws IOException {
@@ -301,8 +324,7 @@ public final class SavedState implements Serializable {
                 state.students.add(loadStudent(data, "student." + i));
             for (int i = 0; i < number(data, "requests.count"); i++) {
                 String key = "request." + i;
-                RequestData request = new RequestData(new AccessRequest(
-                    loadStudent(data, key + ".student").toStudent()));
+                RequestData request = new RequestData(new AccessRequest(loadStudent(data, key + ".student").toStudent()));
                 request.status = get(data, key + ".status");
                 state.requests.add(request);
             }
@@ -320,8 +342,7 @@ public final class SavedState implements Serializable {
                 job.cancellationTime = time(data, key + "cancellationTime");
                 job.cancelledBy = data.getProperty(key + "cancelledBy");
                 job.cancellationReason = data.getProperty(key + "cancellationReason");
-                state.jobs.add(job);
-            }
+                state.jobs.add(job);}
             for (int i = 0; i < number(data, "queue.count"); i++)
                 state.queueJobIds.add(get(data, "queue." + i));
             for (int i = 0; i < number(data, "gpus.count"); i++)
@@ -333,35 +354,26 @@ public final class SavedState implements Serializable {
             throw new IOException("Invalid saved simulation data: " + e.getMessage(), e);
         }
     }
-
     private static class StudentData implements Serializable {
-
         private static final int serialVersionUID = 1;
-
         private String username;
         private String name;
         private String email;
         private String passwordHash;
         private String phone;
-
         private boolean hasAllowance;
         private int allocated;
         private int used;
-
         private Map<String, Integer> reservations;
         private Set<String> settledJobs;
         private List<TimeGrant> grants;
-
         StudentData(Student student) {
-
             username = student.getUsername();
             name = student.getName();
             email = student.getEmail();
             passwordHash = student.getPassHash();
             phone = student.getPhoneNum();
-
             TimeAllowance allowance = student.getTimeAllowance();
-
             hasAllowance = allowance != null;
 
             if (hasAllowance) {
@@ -372,18 +384,13 @@ public final class SavedState implements Serializable {
                 grants = allowance.getGrants();
             }
         }
-
         Student toStudent() {
-
             TimeAllowance allowance = null;
-
             if (hasAllowance) {
-                allowance = TimeAllowance.restore(
-                    allocated, used, reservations, settledJobs, grants);
+                allowance = TimeAllowance.restore(allocated, used, reservations, settledJobs, grants);
             }
 
-            return new Student(username, name, email,
-                    passwordHash, phone, allowance);
+            return new Student(username, name, email, passwordHash, phone, allowance);
         }
     }
     private static class RequestData implements Serializable {
@@ -397,11 +404,11 @@ public final class SavedState implements Serializable {
             student = new StudentData(request.getStudent());
             status = request.getStatus();
         }
-
         AccessRequest toRequest() {
-
-            AccessRequest request = new AccessRequest(student.toStudent());
-
+            return toRequest(student.toStudent());
+        }
+        AccessRequest toRequest(Student restoredStudent) {
+            AccessRequest request = new AccessRequest(restoredStudent);
             if ("APPROVED".equals(status)) {
                 request.approve();
             } else if ("REJECTED".equals(status)) {
@@ -409,7 +416,6 @@ public final class SavedState implements Serializable {
             } else if (!"PENDING".equals(status)) {
                 throw new IllegalArgumentException("Invalid request status.");
             }
-
             return request;
         }
     }
@@ -461,7 +467,6 @@ public final class SavedState implements Serializable {
                 if (gpuId != null || finishTime != null|| cancellationTime == null) {
                     throw new IllegalArgumentException("Invalid queued cancellation.");
                 }
-
                 job.cancel(cancellationTime, cancelledBy, cancellationReason);
                 return job;
             }
