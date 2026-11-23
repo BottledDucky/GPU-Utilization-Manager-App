@@ -9,6 +9,21 @@ public class SimulationClock {
 		this.currentTime = time; 
 		this.startTime = time;
 	}
+
+	public void initialize(LocalDateTime time) {
+		if (time == null) {
+			throw new IllegalArgumentException("Choose a simulation date and time.");
+		}
+		if (isInitialized()) {
+			throw new IllegalStateException("Simulation clock is already initialized.");
+		}
+		currentTime = time;
+		startTime = time;
+	}
+
+	public boolean isInitialized() {
+		return startTime != null && currentTime != null;
+	}
 	
 	public void initialize(LocalDateTime time) {
 		if (time == null) {

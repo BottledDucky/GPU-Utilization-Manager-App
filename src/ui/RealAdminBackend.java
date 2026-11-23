@@ -11,7 +11,6 @@ import model.Administrator;
 import model.GPU;
 import model.Job;
 import model.Student;
-import model.TimeAllowance;
 
 // Connects Member 3's AdminDashboard to Member 1's AccountService,
 // Member 2's Scheduler, and Member 4's storage save callback.
@@ -81,28 +80,36 @@ public class RealAdminBackend implements AdminBackend {
 
     @Override
     public void approveRequest(AccessRequest request, int initialMinutes) {
-        // Once Member 1 adds accountService.approveRequest(uniId, initialMinutes),
-        // replace the two lines below with that call so the student is added to AccountService.
-        request.approve();
-        request.getStudent().setTimeAllowance(new TimeAllowance(initialMinutes));
+        if (request == null || request.getStudent() == null) {
+            throw new IllegalArgumentException("Select a registration request first.");
+        }
+        accountService.approveRequest(request.getStudent().getUniId(), initialMinutes);
         triggerSave();
     }
 
     @Override
     public void rejectRequest(AccessRequest request) {
-        // Once Member 1 adds accountService.rejectRequest(uniId), call it here.
-        request.reject();
+        if (request == null || request.getStudent() == null) {
+            throw new IllegalArgumentException("Select a registration request first.");
+        }
+        accountService.rejectRequest(request.getStudent().getUniId());
         triggerSave();
     }
 
     @Override
     public List<Student> getAllStudents() {
-        return accountService.getStudents();
+        return accountService.getApprovedStudents();
     }
 
     @Override
     public Student findStudentById(String universityId) {
-        return accountService.getStudent(universityId);
+        List<Student> students = accountService.getApprovedStudents();
+        for (int i = 0; i < students.size(); i++) {
+            if (students.get(i).getUniId().equals(universityId)) {
+                return students.get(i);
+            }
+        }
+        return null;
     }
 
     @Override
@@ -125,7 +132,7 @@ public class RealAdminBackend implements AdminBackend {
             throw new IllegalStateException("Student has no active time allowance.");
         }
         SimulationClock clock = scheduler.getClock();
-        if (clock == null) {
+        if (clock == null || clock.getCurrentTime() == null) {
             throw new IllegalStateException("Simulation clock is not initialized.");
         }
         student.getTimeAllowance().grantTime(minutes, adminUser.getUsername(), reason, clock.getCurrentTime());
