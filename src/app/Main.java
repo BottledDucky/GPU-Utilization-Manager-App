@@ -2,21 +2,16 @@ package app;
 
 import java.io.*;
 import java.util.*;
-
 import javax.swing.*;
-
 import logic.AccountService;
 import logic.Scheduler;
 import logic.SimulationClock;
-
 import model.AccessRequest;
 import model.GPU;
 import model.Job;
 import model.Student;
-
 import storage.DataStore;
 import storage.SavedState;
-
 import ui.LoginFrame;
 
 public class Main {

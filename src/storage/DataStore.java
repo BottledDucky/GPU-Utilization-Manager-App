@@ -9,6 +9,12 @@ public final class DataStore {
         this.file = file;
     }
     public void save(SavedState state) throws IOException {
+    	File folder = file.getParentFile();
+
+    	if (folder != null && !folder.exists())
+    	{
+    	    folder.mkdirs();
+    	}
         try (PrintWriter output = new PrintWriter(new FileWriter(file))) {
             state.writeText(output);
             if (output.checkError()) {
