@@ -1,4 +1,3 @@
-
 package storage;
 import java.io.*;
 import java.util.*;
@@ -8,23 +7,27 @@ public final class DataStore {
     public DataStore(File file) {
         this.file = file;
     }
-    public void save(SavedState state) throws IOException {
-    	File folder = file.getParentFile();
+    
+    public void save(SavedState state) throws IOException
+    {
+        File folder = file.getParentFile();
 
-    	if (folder != null && !folder.exists())
-    	{
-    	    folder.mkdirs();
-    	}
-        try (PrintWriter output = new PrintWriter(new FileWriter(file))) {
+        if (folder != null && !folder.exists())
+        {
+            folder.mkdirs();
+        }
+
+        try (PrintWriter output = new PrintWriter(new FileWriter(file)))
+        {
             state.writeText(output);
-            if (output.checkError()) {
-                throw new IOException("Could not save simulation.");}
-            File folder = file.getParentFile();
 
-        if (folder != null && !folder.exists()){
-    folder.mkdirs();}
+            if (output.checkError())
+            {
+                throw new IOException("Could not save simulation.");
+            }
         }
     }
+    
     public Optional<SavedState> load() throws IOException {
         if (!file.exists()) {
             return Optional.empty();
